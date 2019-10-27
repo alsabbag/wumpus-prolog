@@ -10,6 +10,7 @@
 %   Added inline comments to describe each section, method, statement.
 %   Added inline tracing to elaborate on the execution flow.
 %------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
 % A Prolog Implementation of the Wumpus World described in
 % Artificial Intelligence : A Modern Approach (Russel - Norvig)
 %
