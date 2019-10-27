@@ -1,4 +1,15 @@
 %------------------------------------------------------------------------------
+% SCS 3547 Assignment 2
+%
+% Team Members:
+%   Mark Hubbard
+%   Konrad Korzeniewski
+%   Mohammed Radha
+%
+% Approach:
+%   Added inline comments to describe each section, method, statement.
+%   Added inline tracing to elaborate on the execution flow.
+%------------------------------------------------------------------------------
 % A Prolog Implementation of the Wumpus World described in
 % Artificial Intelligence : A Modern Approach (Russel - Norvig)
 %
@@ -12,7 +23,6 @@
 % Usage:
 % consult this file
 % ?-start.
-%
 %------------------------------------------------------------------------------
 %------------------------------------------------------------------------------
 % Methods:
@@ -75,8 +85,10 @@
 %           not_member
 %
 %------------------------------------------------------------------------------
-% Declaring dynamic methods
-
+%------------------------------------------------------------------------------
+% Dymamic Methods:
+%   Declaring dynamic methods used for storing variables.
+%------------------------------------------------------------------------------
 :- dynamic ([
 	     agent_location/1,  % stores the current agent location as a grid quare (dynamic)
 	     gold_location/1,   % stores the gold location as a grid square (static)  
@@ -87,17 +99,40 @@
 	     visited_cells/1,   % tracks the grid square co-ordinates (x,y coordinates)
 	     world_size/1,      % stores the size of the grid (n x n squares)
 	     wumpus_location/1, % stores the wumpus location
-             isPit/2,           % wumpus in pit grid square? (boolean)
-             isWumpus/2,        % wumpus present in grid square? (boolean)
-             isGold/2           % wumpus present in gold grid square? (boolean)
+             isPit/2,           % is the grid square a pit? (boolean)
+             isWumpus/2,        % is the grid square occupied by the Wumpus? (boolean)
+             isGold/2           % is the grid square filled with the gold? (boolean)
 	    ]).
-
-
 %------------------------------------------------------------------------------
-% To start the game
-%  This is the entry point to the program.  Invoked using ?-start.
+% Global Variables:
+%   Coordinates:
+%       X1, Y1 = grid square location of the agent (i.e. the archer).
+%       X2, Y2 = proposed next adjacent grid to which the agent may move.
+%       Z1, Z2, Z3, Z4 = the immediately adjacent squares of the agent (N,E,W,S).
+%   Locations: 
+%       AL = agent location using grid square coordinates (e.g. x, y)
+%       GL = gold location using grid square coordinates (e.g. x, y)
+%       WL = wumpus location using grid square coordinates (e.g. x, y)
+%       VL = the accrued list of grid squares (as co-ordinates) already visited
+%   Game Status:
+%       NewTime = elapsed following each move
+%       NewScore = latest score following each move
+%   Perceptions (enum):
+%       Bleeze = 
+%       Glitter =
+%       Stench =
+%   Agent Movement:
+%       Action = 
+%       Percept = 
+%       VisitedList = 
+%------------------------------------------------------------------------------
+%------------------------------------------------------------------------------
+% Mainline:
+%  Controls the overall flow of the program.
 %------------------------------------------------------------------------------
 
+% To start the game:
+%   This is the entry point to the program.  Invoked using ?-start.
 start :-
     format('Initializing started...~n', []),
     init,
@@ -109,6 +144,7 @@ start :-
 %   These methods plot out the agents path through the world's grid squares.
 %------------------------------------------------------------------------------
 
+%
 step_pre(VisitedList) :-
     agent_location(AL),
     gold_location(GL),
@@ -122,6 +158,7 @@ step_pre(VisitedList) :-
     ; take_steps(VisitedList)
     ).
 
+%
 take_steps(VisitedList) :-
     make_percept_sentence(Perception),
     agent_location(AL),
@@ -145,36 +182,44 @@ take_steps(VisitedList) :-
 %   the current grid square of the agent (i.e the archer).
 %------------------------------------------------------------------------------
 
+%
 update_time :-
     time_taken(T),
     NewTime is T+1,
     retractall( time_taken(_) ),
     assert( time_taken(NewTime) ).
 
+%
 update_score :-
     agent_location(AL),
     gold_location(GL),
     wumpus_location(WL),
     update_score(AL, GL, WL).
-
+%
 update_score(P) :-
     score(S),
     NewScore is S+P,
     retractall( score(_) ),
     assert( score(NewScore) ).
 
+%
 update_score(AL, AL, _) :-
     update_score(1000).
 
+%
 update_score(_,_,_) :-
     update_score(-1).
 
+%
 update_agent_location(NewAL) :-
     retractall( agent_location(_) ),
     assert( agent_location(NewAL) ).
 
+%
 is_pit(no,  X) :-
     \+ pit_location(X).
+
+%
 is_pit(yes, X) :-
     pit_location(X).
 
@@ -184,6 +229,7 @@ is_pit(yes, X) :-
 %   move.
 %------------------------------------------------------------------------------
 
+%
 standing :-
     wumpus_location(WL),
     gold_location(GL),
@@ -195,13 +241,16 @@ standing :-
       %\+ pit_location(yes, Al),
     ).
 
+%
 stnd(_, _, _) :-
     format('There\'s still something to do...~n', []).
 
+%
 stnd(AL, _, AL) :-
     format('YIKES! You\'re eaten by the wumpus!', []),
     fail.
 
+%
 stnd(AL, AL, _) :-
     format('AGENT FOUND THE GOLD!!', []),
     true.
