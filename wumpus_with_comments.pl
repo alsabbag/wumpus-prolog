@@ -37,17 +37,6 @@
 %           take_steps
 %
 %   * Agent/Environment Control *
-%       Updating states:
-%           is_pit
-%           update_agent_location
-%           update_score
-%           update_time
-%
-%       Perceptotion:
-%           make_percept_sentence
-%           make_perception
-%           test_perception
-%
 %       Perceptors:
 %           adj
 %           adjacent
@@ -57,6 +46,17 @@
 %           bleezy
 %           glittering
 %           smelly
+%
+%       Perceptotion:
+%           make_percept_sentence
+%           make_perception
+%           test_perception
+%
+%       Updating states:
+%           is_pit
+%           update_agent_location
+%           update_score
+%           update_time
 %
 %   * Knowledge Representation *
 %       Knowledge Base (KB)
