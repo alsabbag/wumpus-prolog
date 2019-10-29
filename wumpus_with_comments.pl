@@ -229,7 +229,7 @@ update_score(P) :-
 update_score(AL, AL, _) :-
     update_score(1000).
 
-% ????????????????????? 
+% Recursive predicate ? 
 
 %
 update_score(_,_,_) :-
@@ -293,7 +293,7 @@ stnd(AL, AL, _) :-
     true.
 
 %------------------------------------------------------------------------------
-% Perceptotion
+% Perception
 %------------------------------------------------------------------------------
 
 make_perception([_Stench,_Bleeze,_Glitter]) :-
@@ -302,14 +302,29 @@ make_perception([_Stench,_Bleeze,_Glitter]) :-
     isBleezie(AL),
     isGlittering(AL).
 
+% records percepts at the agent location at grid square for variables 
+% for Stench from Stinky
+% for Bleeze from Bleezie
+% for Glitter from Glittering 
+
+
 test_perception :-
 	make_percept_sentence(Percept),
 	format('I feel ~p, ',[Percept]).
+
+% call all percepts as defined in make_percept_sentence
+% Output text with a current percept (smelly/bleezy/glittering)
+
 
 make_percept_sentence([Stench,Bleeze,Glitter]) :-
 	smelly(Stench),
 	bleezy(Bleeze),
 	glittering(Glitter).
+
+% define what percepts will be used in a sentence
+% Stench is smelly
+% Bleeze is bleezy
+% Glitter is glittering
 
 %------------------------------------------------------------------------------
 % Initializing
