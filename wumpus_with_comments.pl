@@ -393,6 +393,15 @@ visit(Xs) :-
 %    ; X is Y-1, Y-1 > 0
 %    ).
 
+%The “adj” relation defines what it means for two integers 
+%(here meant to represent cell locations in the x or y direction) to be adjacent to each other.
+%The “adjacent” rule specifies that the points (x1, y1) and (x2, y2) 
+%are adjacent if they are on the same column (same x) and their y’s are “adj”, 
+%or on the same row (same y) and their x’s are “adj”.
+
+% size of the playing matrix (WS) is calculated by X and Y 
+
+
 adj(1,2).
 adj(2,1).
 adj(2,3).
@@ -405,39 +414,61 @@ adjacent( [X1, Y1], [X2, Y2] ) :-
     ; Y1 = Y2, adj( X1, X2 )
     ).
 
+% Available tiles' location are related to each other
+
+
 %adjacent([X1,Y],[X2,Y]) :-
 %    adj(X1,X2).
 
+% X1 and X2 are adjacent by being on the same column (X) and being related to row Y
+
 %adjacent([X,Y1],[X,Y2]) :-
 %    adj(Y1,Y2).
+
+% similar as above but for rows (Y) with respoect to column X
 
 isSmelly(Ls1) :-
     wumpus_location( Ls2 ),
     adjacent( Ls1, Ls2 ).
 
+% smelly tile is detected if wumpus location is Ls2 and Ls1 is adjacent to Ls2
+
 isBleezy(Ls1) :-
     pit_location( Ls2 ),
     adjacent( Ls1, Ls2 ).
+    
+ % bleezy tile is detected if pit location is Ls2 and Ls1 is adjacent to Ls2
 
 isGlittering( [X1, Y1] ) :-
     gold_location( [X2, Y2] ),
     X1 = X2,
     Y1 = Y2.
 
+% Glittering is present when its attributes X1 and Y1 are passed gold location in X2 and Y2
+% Glittering's X1 is Gold location's X2
+% Glittering's Y1 is Gold location's y2
+
+
 bleezy(yes) :-
     agent_location(AL),
     isBleezy(AL).
 bleezy(no).
+
+% Bleezy is yes when agent_location and isBleezy are the same values, otherwise no
 
 smelly(yes) :-
     agent_location(AL),
     isSmelly(AL).
 smelly(no).
 
+% smelly is yes when agent location and isSmelly are the same values, otherwise no
+
 glittering(yes) :-
     agent_location(AL),
     isGlittering(AL).
 glittering(no).
+
+% Glittering is yes when agent_location and isGlittering are the same valuesm, otherwise no
 
 %------------------------------------------------------------------------------
 % Knowledge Base:
