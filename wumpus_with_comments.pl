@@ -190,12 +190,27 @@ update_time :-
     retractall( time_taken(_) ),
     assert( time_taken(NewTime) ).
 
+% define the methiod
+% take current time 
+% increment by 1 to get a new time
+% remove old time fact 
+% imput new time fact 
+
+
 %
 update_score :-
     agent_location(AL),
     gold_location(GL),
     wumpus_location(WL),
     update_score(AL, GL, WL).
+    
+% define the method
+% current agent location on the grid, AL is agent location
+% current gold location on the grid, GL is gold location
+% current wumpus location on the grid, WL is wunous location
+% close the method
+
+
 %
 update_score(P) :-
     score(S),
@@ -203,26 +218,47 @@ update_score(P) :-
     retractall( score(_) ),
     assert( score(NewScore) ).
 
+% define the method
+% current agent score, S is score
+% define new score by adding value from the update method P to the score S
+% remove old score whatever the current value is
+% input the new score, NewScore is score
+
+
 %
 update_score(AL, AL, _) :-
     update_score(1000).
+
+% Recursive predicate ? 
 
 %
 update_score(_,_,_) :-
     update_score(-1).
 
+% ?????????????????????
+
 %
 update_agent_location(NewAL) :-
     retractall( agent_location(_) ),
     assert( agent_location(NewAL) ).
+    
+% agent location is NewAL
+% remove current agent location
+% input new agant location, NewAl is agent location
 
 %
 is_pit(no,  X) :-
     \+ pit_location(X).
 
+% X is not in a pit
+% X is a pit location, (predicate is fact terminated by a period) 
+
 %
 is_pit(yes, X) :-
     pit_location(X).
+    
+% X is in the pit
+% X is a pit location, (predicate is fact terminated by a period) 
 
 %------------------------------------------------------------------------------
 % Display standings
@@ -257,7 +293,7 @@ stnd(AL, AL, _) :-
     true.
 
 %------------------------------------------------------------------------------
-% Perceptotion
+% Perception
 %------------------------------------------------------------------------------
 
 make_perception([_Stench,_Bleeze,_Glitter]) :-
@@ -266,14 +302,29 @@ make_perception([_Stench,_Bleeze,_Glitter]) :-
     isBleezie(AL),
     isGlittering(AL).
 
+% records percepts at the agent location at grid square for variables 
+% for Stench from Stinky
+% for Bleeze from Bleezie
+% for Glitter from Glittering 
+
+
 test_perception :-
 	make_percept_sentence(Percept),
 	format('I feel ~p, ',[Percept]).
+
+% call all percepts as defined in make_percept_sentence
+% Output text with a current percept (smelly/bleezy/glittering)
+
 
 make_percept_sentence([Stench,Bleeze,Glitter]) :-
 	smelly(Stench),
 	bleezy(Bleeze),
 	glittering(Glitter).
+
+% define what percepts will be used in a sentence
+% Stench is smelly
+% Bleeze is bleezy
+% Glitter is glittering
 
 %------------------------------------------------------------------------------
 % Initializing
