@@ -229,13 +229,15 @@ update_score(P) :-
 update_score(AL, AL, _) :-
     update_score(1000).
 
-% Recursive predicate ? 
+% This is a performance measure, add 1000 to the general score for getting the gold
+% tile locations and updated score are variables 
 
 %
 update_score(_,_,_) :-
     update_score(-1).
-
-% ?????????????????????
+    
+% This is a performance measure, subtract 1 from the general score for any action taken 
+% updated score is a variable
 
 %
 update_agent_location(NewAL) :-
