@@ -10,19 +10,29 @@ A detailed analysis of a prolog-based implementation of Wumpus World.
 * Konrad Korzeniewski
 * Mohammed Radha
 
+## Objective
+
+* Get a copy of the Wumpus World solution [here](https://github.com/rlegendi/wumpus-prolog/blob/master/wumpus.pl).  Run it [here](https://swish.swi-prolog.org/).
+* Working in teams of (up to) 3, read and determine how all the code works.
+* You can find online PDFs of Prolog tutorials and books to assist with the syntax and/or ask using Quercus.
+* Write and submit an explanation of how each rule in the program works.
+* If several rules are very similar you can simply describe one and how the others differ.
+
 ## Approach:
 
 * Created a markdown document with embeded code snippets.
 * Organized the documentation into major "sections" and "blocks" of rules based on the original code structure.
 * Analyzed and documented the overall structure and flow of the program.
-* Analyzed and documented sections, blocks rules and facts.
+* Analyzed and documented sections, blocks, rules and facts.
 
 ## References
-* Artificial Intelligence : A Modern Approach (Russel - Norvig)
-* CSC384 Prolog Tutorial (Hojjat Ghaderi and Fahiem Bacchus, University of Toronto)
+* Artificial Intelligence : A Modern Approach (Russel - Norvig).
+* CSC384 Prolog Tutorial (Hojjat Ghaderi and Fahiem Bacchus, University of Toronto).
+* [Wikipedia Prolog Entry](https://en.wikipedia.org/wiki/Prolog_syntax_and_semantics)
+* [Prolog Guide](https://www.cis.upenn.edu/~matuszek/Concise%20Guides/Concise%20Prolog.html)
 * Code by:
-	* Author: Richard O. Legendi (with permission from above authors)
-	* Version: v1.0, Jan. 31, 2007
+	* Author: Richard O. Legendi (with permission from above authors).
+	* Version: v1.0, Jan. 31, 2007.
 
 # Program Analysis
 
@@ -31,15 +41,15 @@ A detailed analysis of a prolog-based implementation of Wumpus World.
 
 The code can be organized into three main sections:
 
-1. **Program Control** - managing the overall flow from initialization to termination.
-2. **Agent/Environment Control** - the rules and facts related to agent movement and environment state.
+1. **Program Control** - managing the overall flow (starting at the main entry point) from initialization to termination.
+2. **Agent/Environment Management** - the rules and facts related to agent movement and environment state.
 3. **Knowledge Base** - the set of initial and dynamically determined facts.
 
 In the original code, each section is demarcated into blocks of related rules using a comment block.
 
 The following table shows how the rules are divided up into their respective sections and blocks.
 
-| Program Control      		| Agent/Environment Control | Knowlege Management  
+| Program Control      		| Agent/Environment Management | Knowledge Management  
 |:------------------------	|:--------------------------|:---------------------
 | _Mainline:_			   		| _Perceptors:_             | _Knowledge Base (KB):_
 | * start						| * adj                     | * ask_KB
@@ -66,6 +76,8 @@ _Note: In the detailed analysis later in this document, a couple of blocks were 
 
 ## Flow Analysis
 
+### Core Flow
+
 The main flow of the program is:
 
 * start ->
@@ -79,47 +91,134 @@ The main flow of the program is:
          * smelly - _is it smelly?_
          * bleezy - _is it bleezy?_
          * glittering - _is it glittering?_
-     * agent_location - _update the agent location_
-     * update_KB - _update what we know in the KB_ ->
-         * add\_wumpus_KB - _set Wumpus location if detected_
-         * add\_pit_KB -  _set pit location if detected_
-         * add\_gold_KB - _set gold location if detected_
+     * agent_location - _resolve the agent location (to print)_
+     * update_KB - _update what we know in the KB (based on percepts from agent location)_ ->
+         * add\_wumpus_KB - _set Wumpus location facts_
+         * add\_pit_KB -  _set pit location facts_
+         * add\_gold_KB - _set gold location facts_
      * ask_KB - _query the KB to help decide on a next move_
      * update_time - _update the time elapsed so far_
      * update_score - _update the score so far_
-     * step_pre - _check if the game has ended (i.e. kill or be killed)_
-         * take_steps - _recurse making moves until game ends_
+     * step_pre - _check if the game has ended (i.e. get rich or die trying)_
+         * take_steps - _recurse making moves until the game ends_
+
+_Note: The above flow hierarchy doesn't exhaustively include all child rules.  It only goes as deep as necessarily to highlight the main control flow._
+
+
+This version of Wumpus is somewhat simplifed from the class version:
+
+1. The agent has no bow and arrow (and hence, no need to rotate in place to aim).
+2. The agent can go directly to any valid grid square (but cannot move to a grid square it has already visited).
+
+### Initial Board Configuration
+
+```
+% agent location fact
+assert( agent_location([1,1]) )
+
+% pit location facts
+assert( pit_location([4,4]) )
+assert( pit_location([3,3]) )
+assert( pit_location([1,3]) )
+
+% gold location fact  
+assert( gold_location([3,2]) )
+
+% Wumpus location fact
+assert( wumpus_location([4,1]) )
+```
+
+
+|     |     |     |  P  |
+|:---:|:---:|:---:|:---:|
+|  P  |     |  P  |     |
+|     |     |  G  |     |
+|  A  |     |     |  W  |
+
+A = Agent,
+G = Gold,
+P = Pit,
+W = Wumpus
+
+### Bugs?
+
+There appears to be a few bugs in the logic.  For example (based on a sample run - see Appendix):
+
+* The gold detection doesn't appear correct based on the following console output (with commentary added):
+
+    > KB learn [3,2] - there's no gold here! **% Yes, there is!**.  
+    > I'm going to: [3,2]  
+    > There's still something to do...  
+    > WON!  % See, I told you there was gold here!    
+
+* The pit detection (and Wumpus detection) logic doesn't appear to be trustworthy. For example:
+    > I'm in [1,2], seeing: [no,yes,no].  
+    > KB learn [1,3] - its a Pit!  
+    > KB learn [1,1] - its a Pit!  **% incorrect!**  
+    > KB learn [2,2] - its a Pit!  **% incorrect!**  
+    > KB learn [0,2] - its a Pit!  **% X=0 is an invalid co-ordinate value!**   
+
+    The logic for declaring a pit based on a percept of Bleeze, blindly asserts that all adjacent squares around the agent location have a pit, replacing previously true facts with fake facts (e.g. in the above case, we already knew that the starting point [1,1] was not a pit, however, the Bleeze detected when the agent visited grid square [1,2] overrules that fact).  The logic for asserting Wumpus location facts appears to have the same issue.
+
+* The flow seems to hit a glitch at location [3,1] near the Wumpus:
+
+```
+I'm in [1,1], seeing: [no,no,no]
+I'm going to: [1,2]
+I'm in [1,2], seeing: [no,yes,no]
+I'm going to: [2,1]
+I'm in [2,1], seeing: [no,no,no]
+I'm going to: [2,2]
+I'm in [2,2], seeing: [no,no,no]
+I'm going to: [3,1]
+I'm in [3,1], seeing: [yes,no,no]
+I'm in [3,1], seeing: [no,no,no]  **% Where did the stench go?**
+I'm going to: [2,3]
+I'm in [2,3], seeing: [no,yes,no]
+I'm going to: [3,2]
+WON!
+```
+
 
 ## Variables:
 
-* Grid Square Co-ordinates:
-    * X1, Y1 - grid square location of the agent (i.e. the archer).
-    * X2, Y2 - proposed next adjacent grid square to which the agent may move.
-    * Z1, Z2, Z3, Z4 - the immediately adjacent grid squares of the agent (North, South, East, West).
+
 * Entity Locations: 
     * AL - agent location using grid square co-ordinates (i.e. x, y)
-    * NewAL - the "next" location for an agent using grid square co-ordinates.
-    * L -
+    * L - the "next" location for an agent using grid square co-ordinates.
     * GL - gold location using grid square co-ordinates.
     * WL - wumpus location using grid square co-ordinates.
     * VL = the accrued list of grid squares (as co-ordinates) already visited.
+ * Grid Square Co-ordinates:
+    * Z1, Z2, Z3, Z4 - the immediately adjacent grid squares of the agent (North, South, East, West).
 * Game Status:
     * T - current elaped time
-    * NewTime - elapsed time following the latest move
     * S - current score
-    * NewScore - latest score following the latest move
 * Perceptions:
     * Bleeze - a boolean value to indicate if the agent can perceive "bleeze".
     * Glitter - a boolean value to indicate if the agent can perceive glitter.
     * Stench - a boolean value to indicate if the agent can perceive a stench.     
 * Agent Movement:
-	 * Action - a specific action to move forward or rotate in place
-    * Percept - stores a perception (see above)
+	 * Action - the next location for the agent as resolved by the knowledge base.
     * VisitedList - a list of co-ordinates for grid squares that the agent has visited.
+
+_Note: There are a number of "single use" variables (i.e. used within a single rule):_
+
+* Aloc - the agent location
+* NewAL - the "next" location for an agent using grid square co-ordinates.
+* NewScore - latest score following the latest move.
+* NewTime - elapsed time following the latest move.
+* Percept - unifies to an individual perception (Bleeze, Glitter, Stench)
+* Perception - a triplet of Stench, Bleeze and Glitter (e.g. [yes, no, no]).
+* X - a generic location variable (I guess because X marks the spot).
+* [X1, Y1] and [X2, Y2] - instances of grid square locations used during location comparisons
+* [X, y] and [U, V] - location variables used during list membership checks
+* Xs and Ys - two list members (head and tail) used when building the visited_list
+* Ls1 and Ls2 - locations being compared for adjacency while processing percepts
 
 ## Dynamics
 
-The following structures are made dynamic so that clauses can be dynamically added (via assert) and removed (via retract):
+The following predicates are declared to be dynamic so that clauses can be dynamically added (via assert) and removed (via retract):
 
 * agent_location/1 - stores the current agent location as a grid square co-ordinate (x,y co-ordinates)
 * gold_location/1,   % stores the gold location as a grid square (x,y co-ordinates)  
@@ -134,6 +233,8 @@ The following structures are made dynamic so that clauses can be dynamically add
 * isWumpus/2,        % is the grid square occupied by the Wumpus? ((x,y co-ordinates and a boolean)
 * isGold/2           % is the grid square filled with the gold? ((x,y co-ordinates and a boolean)
 
+_Note: the /n designates the number of arguments for the predicate._
+
 ```
 :- dynamic ([
 	     agent_location/1,
@@ -145,9 +246,9 @@ The following structures are made dynamic so that clauses can be dynamically add
 	     visited_cells/1,
 	     world_size/1,
 	     wumpus_location/1,
-             isPit/2,
-             isWumpus/2,
-             isGold/2
+        isPit/2,
+        isWumpus/2,
+        isGold/2
 	    ]).
 ```
 
@@ -157,7 +258,7 @@ The following structures are made dynamic so that clauses can be dynamically add
 
 ### start
 
-This rule is the entry point of the program (invoked using ?-start).  The query *start* (invoked from the command line) discovers and invokes the *start* rule to prove the query.  This rule executes the init and take_steps clauses to respond to the query.  The rule is proven if the init and take_steps clauses succeed (as well as the format statements that print to the console). The predicate "take_steps" either succeeds or fails depending on the fate of the agent in the game.
+This rule is the entry point of the program (invoked using ?-start).  The query *start* (invoked from the command line) discovers and invokes the *start* rule to prove the query.  This rule executes both the init and take\_steps clauses to respond to the query.  The rule is proven if the init and take\_steps clauses succeed (as well as the format statements that print to the console). The predicate take\_steps either succeeds or fails depending on the fate of the agent in the game.
 
 ```
 start :-
@@ -192,7 +293,7 @@ It then asserts the following facts:
 * the number of *visited* grid squares is 1
 * the list of *visited_cells* is empty ([]).
 
-Note: At this point, the location of the pits, gold, agent or Wumpus have not been addressed.
+_Note: At this point, the location of the pits, gold, agent or Wumpus have not been set._
 
 ```
 init_game :-
@@ -211,6 +312,7 @@ init_game :-
     retractall( visited_cells(_) ),
     assert( visited_cells([]) ).
 ```
+
 ### init\_land_fig72
 
 The followiing rule retracts and then asserts all the facts for the size of the board (*world_size*) and the location of the gold (*gold_location*) and all pits (*pit_location*) according to Figure 7.2 in Russel-Norvig's book (2nd Edition).
@@ -250,7 +352,7 @@ init_agent :-
 ```
 ### init_wumpus
 
-The followiing rule retracts all facts regarding the Wumpus and then places it on grid square [4,1](*wumpus_location([4,1]*).
+The followiing rule retracts all facts regarding the Wumpus location and then places it on grid square [4,1](*wumpus_location([4,1]*).
 
 ```
 init_wumpus :-
@@ -268,7 +370,7 @@ visit(Xs) :-
     assert( visited_cells([Ys|Xs]) ).
 ```
 
-## Scheduling simulation:
+## Scheduling Simulation:
 
 These rules plot out the agents path through the world's grid squares.
 
@@ -277,14 +379,11 @@ Before a step is taken (not including the first step), the current state of the 
 
 The initial clauses in the following rule gather the facts around the current location of the agent (*agent_location(AL)*), the location of the gold (*gold_location(GL)*) and the location of the Wumpus (*wumpus_location(GL)*).  The current score (*score(S)*) and game time (*time_taken(T)*) facts are also gathered.
 
-Once the facts are all gathered into variables, a conjuctive clause is invoked to determine whether the game is over or it should contine.
-
-The game is over if:
+Once the facts are all gathered into variables, a disjunctive set of clauses is invoked to determine whether the game is over or it should contine.  The three clauses are:
 
 1. The agent location (*AL*) and gold location (*GL*) variables can be matched/unified (*AL=GL*), which consequently declares a win and prints the score and time taken.
 2. The agent location (*GL*) and Wumpus location (*WL*) variables can be matched/unified (*AL=WL*), which consequently declares a loss and prints the score (*S*) and time taken(*T*).
-
-If the game is not over, the next steps are taken based on the steps already taken (*take_steps(Visited_List)*).
+3. If the game is not over, the next steps are taken based on the steps already taken (*take_steps(Visited_List)*).
 
 ```
 step_pre(VisitedList) :-
@@ -305,13 +404,16 @@ step_pre(VisitedList) :-
 
 Taking a step involves taking a look before the leap, and several facts are asserted after making a move. 
 
-First, this rule collects an overall set of facts into a variable (*make_percept_sentence(Perception)*).  These facts (or "sentence") are a triplet of stench, bleeze and glitter based on the current agent location (*AL*).
+First, this rule collects an overall set of facts into a variable (*make_percept_sentence(Perception)*).  These facts (or "sentence") are a triplet of stench, bleeze and glitter based on the current agent location (*AL*).  
 
-The knowledge base is updated with the overall perception facts from this agent location.(*update_KB(Perception)*).
+The agent location is explicitly resolved via the *update_location(AL)* clause in this rule simply to facilitate the print statement.  Likewise, it is resolved later in the rule via the *update_location(Aloc)* to add it to the visited list (*VL*).
+
+The knowledge base is updated with the overall perception facts from this agent location (*update_KB(Perception)*).
 
 Both the time (*update_time*) and score (*update_score*) facts are updated.
 
 The visited list (*VL*) is updated by adding the agent location (*AL*) to the start of the list.  This rule also checks the facts as to whether the agent is still "standing" (*standing*).  The ongoing scheduling of moves through rule recursion continues by this rule resolving the *step_pre(VL)* rule (which called this rule) passing it the updated visited list.
+
 ```
 take_steps(VisitedList) :-
     make_percept_sentence(Perception),
@@ -339,7 +441,11 @@ These methods print out the current state of the game after each agent move.
 
 The following rule detects whether the agent is still standing.  The initial clauses collect the facts around wumpus location, gold location and agent location and unifies them into their respective global variables (*WL, GL and AL*).
 
-if the agent location matches with a pit location (*is_pit(yes, AL)*), then this rule prints out the fate and resolves as a "fail" (which breaks out of the recursion in *take_steps*).  It conjunctively displays a summary of the overall state of the agent (*stnd(AL,GL,WL)*) rule with the pit rule to display the summary of the current state.
+After resolving the locations, it disjunctively:
+
+1. Checks for a pit (and if true, it then prints out
+Checks if the agent location matches with a pit location (*is_pit(yes, AL)*), and if so, prints out the agent's fate and resolves as a "fail" (which breaks out of the recursion in *take_steps*), or, 
+2. Displays a summary of the overall current state of the game (*stnd(AL,GL,WL)*).
 
 ```
 standing :-
@@ -350,7 +456,6 @@ standing :-
     ( is_pit(yes, AL) -> format('Agent was fallen into a pit!~n', []),
       fail
     ; stnd(AL, GL, WL)
-      %\+ pit_location(yes, Al),
     ).
 ```
 
@@ -358,13 +463,13 @@ standing :-
 
 The followiing rule resolves by printing out a statement on the current state of the agent.  The three arguments to the rule represent the agent location, the gold location and the Wumpus location.
 
-First off, there's always something to do (this rule matches any location variables)...
+First off, there's always something to do, even if that something is to verify there's nothing to do other than win or lose the game (because the following rule matches any location of the agent, gold or Wumpus)...
 ```
 stnd(_, _, _) :-
     format('There\'s still something to do...~n', []).
 ```
 
-However, if the AL location effectively unifies with the Wumpus location (by matching both the first and third arguments), it's game over (*stnd(AL,_,AL)*) and the rule fails.
+However, in the following rule, if the AL location effectively unifies with the Wumpus location (by matching both the first and third arguments), it's game over (*stnd(AL,_,AL)*) and the rule resolves as a fail to break out of the recursion in *take_steps* 	and end the query (with a final response of "fail").
 
 ```
 stnd(AL, _, AL) :-
@@ -372,7 +477,7 @@ stnd(AL, _, AL) :-
     fail.
 ```
 
-If the AL location unifies with the gold location (by matching both the first and second arguments), the agent wins (*stnd(AL,AL,_)*) and the rule succeeds.
+Finally, in the following rule, if the AL location unifies with the gold location (by matching both the first and second arguments), the agent wins (*stnd(AL,AL,_)*) and the rule resolves to true to break out of the recursion in *take_steps* with a final response of "true").
 
 ```
 stnd(AL, AL, _) :-
@@ -389,11 +494,7 @@ These rules update the game metadata (time and score) as well as the current gri
 
 ### update_time
 
-* define the methiod
-* take current time 
-* increment by 1 to get a new time
-* remove old time fact 
-* imput new time fact 
+The following rule resolves the current time value (*T*) and increments it by 1 (*NewTime is T+1*).  The current time is retracted and the updated time is asserted (*time_taken(NewTime)*).
 
 ```
 update_time :-
@@ -404,6 +505,8 @@ update_time :-
 ```
 
 ### update_score
+
+The following rule resolves the current time value (*T*) and increments it by 1 (*NewTime is T+1*).  The current time fact is retracted and an updated time fact is asserted (*time_taken(NewTime)*).
 
 * define the method
 * current agent location on the grid, AL is agent location
@@ -419,11 +522,7 @@ update_score :-
     update_score(AL, GL, WL).
 ```    
 
-* define the method
-* current agent score, S is score
-* define new score by adding value from the update method P to the score S
-* remove old score whatever the current value is
-* input the new score, NewScore is score
+The following rule resolves the current score value (*S*) and increments it by the points value supplied (*P*) to generate the new score (*NewScore is S+P*).  The current score fact is retracted and an updated time fact is asserted (*time_taken(NewTime)*).
 
 ```
 update_score(P) :-
@@ -433,26 +532,21 @@ update_score(P) :-
     assert( score(NewScore) ).
 ```
 
-* This is a performance measure, add 1000 to the general score for getting the gold
-* tile locations and updated score are variables 
+The following rule resolves if the agent location and the gold location match (via the triplet provided, where the Wumpus location is irrelevant) and adds 1000 to the current score (for finding the gold) by calling the single argument score rule (*update_score(1000)*).
 
 ```
 update_score(AL, AL, _) :-
     update_score(1000).
 ```
 
-
-* This is a performance measure, subtract 1 from the general score for any action taken 
-* updated score is a variable
+The following rule decrements the current score by 1 (*update_score(-1)*) each time it is invoked.  This rule a clause within the *take_steps* rule, hence the score is decremented on every agent move.
 
 ```
 update_score(_,_,_) :-
     update_score(-1).
 ```
     
-* agent location is NewAL
-* remove current agent location
-* input new agant location, NewAl is agent location
+The following rule updates the agents new location (specified by the variable *NewAL*) by retracting any old location facts and asserting a new one (*assert( agent_location(NewAL)*).
 
 ```
 update_agent_location(NewAL) :-
@@ -460,16 +554,14 @@ update_agent_location(NewAL) :-
     assert( agent_location(NewAL) ).
 ```
 
-* X is not in a pit
-* X is a pit location, (predicate is fact terminated by a period) 
+The following rule determines that the specified location (*X*) is not a pit, using negation by failure (*\+ pit_location(X)*). Prolog assumes that if it can't prove an assertion, then the assertion is false. If *pit_location(X)* can't be proved, it is assumed to be false, hence the rule succeeds indicating no pit at this location.
 
 ```
 is_pit(no,  X) :-
     \+ pit_location(X).
 ```
 
-* X is in the pit
-* X is a pit location, (predicate is fact terminated by a period) 
+The following rule shows that the specified location (*X*) is indeed a pit, by matching a pit location fact for this location (*pit_location(X)*).  If there is no pit location fact for this location, this rule does not succeed.
 
 ```
 is_pit(yes, X) :-
@@ -480,10 +572,9 @@ is_pit(yes, X) :-
 
 ### make_perception
 
-* records percepts at the agent location at grid square for variables 
-* for Stench from isStinky
-* for Bleeze from isBleezie
-* for Glitter from isGlittering 
+The following rule appears to want to match a given perception triplet (e.g. *[no,yes,no]* spanning the trilogy of smelly, bleezy and gittering to the current agent location.  However, *isStinky(X)* and *isBleezie(X)* do not exist!
+
+_Note: What is "bleezy" anyway! Must be a misspelled variant of "breezy"._
 
 ```
 make_perception([_Stench,_Bleeze,_Glitter]) :-
@@ -495,8 +586,7 @@ make_perception([_Stench,_Bleeze,_Glitter]) :-
 
 ### test_perception
 
-* call all percepts as defined in make_percept_sentence
-* Output text with a current percept (smelly/bleezy/glittering)
+The following rule simply prints a perception sentence to the console.
 
 ```
 test_perception :-
@@ -506,10 +596,11 @@ test_perception :-
 
 ### make\_percept_sentence
 
-* define what percepts will be used in a sentence
-* Stench is smelly
-* Bleeze is bleezy
-* Glitter is glittering
+The following rule constructs a "percept sentence" which is a triplet of the boolean Stench, Bleeze and Glitter values (e.g. *[yes, no, no]*).
+
+* _smelly_ resolves whether Stench is yes or no
+* _bleezy_ resolves whether Bleeze is yes or no
+* _glittering_ resolves whether Glitter is yes or no
 
 ```
 make_percept_sentence([Stench,Bleeze,Glitter]) :-
@@ -518,25 +609,27 @@ make_percept_sentence([Stench,Bleeze,Glitter]) :-
 	glittering(Glitter).
 ```
 
-## Perceptors
+The rule tree for make\_percept_sentence is:
 
-%%% Institiation error!!!
+* make\_percept_sentence
+    * smelly
+        * isSmelly
+            * adjacent
+                * adj
+    * bleezy
+        * isBleezy
+           * adjacent
+               * adj
+    * glittering
+        * isGlittering
 
-%adj(X,Y) :-
-%    world_size(WS),
-%    ( X is Y+1, Y   < WS
-%    ; X is Y-1, Y-1 > 0
-%    ).
+_Note: The resolution processing may not go beyond the first level depending on the argument values.  See the rule descriptions for smelly, bleezy and glittering._
 
 ### adj
 
-* The “adj” relation defines what it means for two integers 
-(here meant to represent cell locations in the x or y direction) to be adjacent to each other.
-* The “adjacent” rule specifies that the points (x1, y1) and (x2, y2) 
-are adjacent if they are on the same column (same x) and their y’s are “adj”, 
-or on the same row (same y) and their x’s are “adj”.
+The “adj” relation defines what it means for two integers to be adjacent to each other (here meant to represent grid square locations where the integers are the co-ordinates along the x or y axis).
 
-* Size of the playing matrix (WS) is calculated by X and Y 
+_Note: This set of rules assumes a 4x4 grid._
 
 ```
 adj(1,2).
@@ -549,7 +642,12 @@ adj(4,3).
 
 ### adjacent
 
-Available tiles' location are related to each other
+The following rule specifies that the points (X1, Y1) and (X2, Y2) 
+are adjacent if they are either:
+
+1. In the same column (same X) with their Y values adjacent (*adj(Y1, Y2)*).
+2. In the same row (same Y) with their X values adjacent (*adj(X1, X2)*).
+or on the same row (same y) and their x’s are “adj”.
 
 ```
 adjacent( [X1, Y1], [X2, Y2] ) :-
@@ -558,23 +656,10 @@ adjacent( [X1, Y1], [X2, Y2] ) :-
     ).
 ```
 
-X1 and X2 are adjacent by being on the same column (X) and being related to row Y
-
-```
-%adjacent([X,Y1],[X,Y2]) :-
-%    adj(Y1,Y2).
-```
-
-Similar as above but for rows (Y) with respoect to column X
-
-```
-%adjacent([X1,Y],[X2,Y]) :-
-%    adj(X1,X2).
-```
-
 ### isSmelly
 
-smelly tile is detected if wumpus location is Ls2 and Ls1 is adjacent to Ls2.
+The following rule shows a location (*Ls1*) to be "smelly" if an adjacent location (*Ls2*) contains the Wumpus (*wumpus_location(Ls2)*).
+
 ```
 isSmelly(Ls1) :-
     wumpus_location( Ls2 ),
@@ -582,8 +667,8 @@ isSmelly(Ls1) :-
 ```
 
 ### isBleezy
-    
-bleezy tile is detected if pit location is Ls2 and Ls1 is adjacent to Ls2.
+
+The following rule shows a location (*Ls1*) to be "bleezy" if an adjacent location (*Ls2*) contains a pit (*pit_location(Ls2)*).    
 
 ```
 isBleezy(Ls1) :-
@@ -593,9 +678,7 @@ isBleezy(Ls1) :-
 
 ### isGlittering
 
-* Glittering is present when its attributes X1 and Y1 are passed gold location in X2 and Y2.
-* Glittering's X1 is Gold location's X2.
-* Glittering's Y1 is Gold location's Y2.
+The following rule shows a location (*[X1,Y1]*) to be "glittering" if it matches the gold location (*gold_location[X2,Y2]*).   Specifically, glittering is present when the specified location's x,y co-ordinates (*X1 and Y1*) match the gold location's x,y co-ordinates (*X2 and Y2*).
 ```
 isGlittering( [X1, Y1] ) :-
     gold_location( [X2, Y2] ),
@@ -605,7 +688,7 @@ isGlittering( [X1, Y1] ) :-
 
 ### bleezy
 
-* Bleezy is yes when agent_location and isBleezy are the same values, otherwise no.
+The following rule shows that *bleezy* is yes when the agent location and *isBleezy* are the same, otherwise it is no.
 
 ```
 bleezy(yes) :-
@@ -613,10 +696,11 @@ bleezy(yes) :-
     isBleezy(AL).
 bleezy(no).
 ```
+_Note: The order of the above two rules is important. The yes rule is given the first chance while processing a query for this single argument predicate.  If it can't resolve, then the no fact prevails.  If the fact came first, it would always take precedence during a query and would assert no._
 
 ### smelly
 
-* smelly is yes when agent location and isSmelly are the same values, otherwise no.
+The following rule shows that *smelly* is yes when the agent location and *isSmelly* are the same, otherwise it is no.
 
 ```
 smelly(yes) :-
@@ -625,9 +709,11 @@ smelly(yes) :-
 smelly(no).
 ```
 
+_Note: Similar to bleezy, the order is important._
+
 ### glittering
 
-* glittering is yes when agent_location and isGlittering are the same valuesm, otherwise no.
+The following rule shows that *glittering* is yes when the agent location and *isGlittering* are the same, otherwise no.
 
 ```
 glittering(yes) :-
@@ -635,6 +721,8 @@ glittering(yes) :-
     isGlittering(AL).
 glittering(no).
 ```
+
+_Note: Similar to bleezy, the order is important._
 
 ## Knowledge Base
 
@@ -653,9 +741,9 @@ update_KB( [Stench,Bleeze,Glitter] ) :-
     add_gold_KB(Glitter).
 ```
 
-### add_wumpus_KB
+### add\_wumpus_KB
 
-The following rule resolves to show the four adjacent grid squares locations to the current agent location (*agent_location([X,Y])*) do not contain a Wumpus based on their being no stench detected at the current agent location.  The four adjacent squares (*Z1, Z2, Z3, Z4)*) are calculated and set using "is".  Each of these calculated locations are then set as facts indicating the Wumpus is not at that particular location (e.g. *assume_wumpus(no, [X,Z1])*).
+The following rule resolves to show the four adjacent grid squares locations to the current agent location (*agent_location([X,Y])*) do not contain a Wumpus based on their being no stench detected at the current agent location.  The four adjacent squares (*Z1, Z2, Z3, Z4)*) are calculated and set using "is" for assignment.  Each of these calculated locations are then set as facts indicating the Wumpus is not at that particular location (e.g. *assume_wumpus(no, [X,Z1])*).
 
 A rule for storing a confirmed location of the Wumpus is unnecessary, becasue by then, it's too late.
 
@@ -676,11 +764,12 @@ add_wumpus_KB(no) :-
     Z4 is X-1, assume_wumpus(no,[Z4,Y]).
 ```
 
-### add_pit_KB
+### add\_pit_KB
 
 Based on the value of "Bleeze" used to invoke these rules (i.e. *add_pit_KB(Bleeze)*, facts about a pit location in adjacent grid squares can set.
 
 The following rule (based on *Bleeze* being a "no") invokes clauses that assert facts that there is no pit adjacent to the current agent location.  The values for Z1,Z2,Z3,Z4 are already calculated.
+
 ```
 add_pit_KB(no) :-
     agent_location([X,Y]),
@@ -690,7 +779,7 @@ add_pit_KB(no) :-
     Z4 is X-1, assume_pit(no,[Z4,Y]).
 ```
 
-The following rule (based on *Bleeze* being a "yes") invokes clauses that there is indeed a pit adjacent to the current agent location.  The values for Z1,Z2,Z3,Z4 are already calculated.
+The following rule (based on *Bleeze* being a "yes") invokes clauses that show there is indeed a pit adjacent to the current agent location.  The values for Z1,Z2,Z3,Z4 are already calculated.
 
 ```
 add_pit_KB(yes) :-
@@ -701,9 +790,9 @@ add_pit_KB(yes) :-
     Z4 is X-1, assume_pit(yes,[Z4,Y]).
 ```
 
-### add_gold_KB
+### add\_gold_KB
 
-Based on the value of *Glitter* used to invoke these rules (i.e. *add_gold_KB(Glitter)*, facts about the gold location in the current grid square can set.
+Based on the value of *Glitter* used to invoke these rules (i.e. *add\_gold_KB(Glitter)*, facts about the gold location in the current grid square can set.
 
 The following rule (based on *Glitter* being a "no") invokes clauses that assert facts that there is no gold at the current agent location.
 
@@ -799,13 +888,13 @@ permitted([X,Y]) :-
 ```
 ### ask_KB
 
-The followiing rule suggests an "action" in the form of a new location by resolving to a safe, valid, unvisited location (*L*) for the agent.
+The followiing rule solves for an "action" in the form of a new location by resolving to a safe, valid, unvisited location (*L*) for the agent.
 
-There are 3 key checks made:
+There are 3 key rule checks made:
 
-1. Checking for danger: The clauses for ensuring that, as a result of this action, there is no Wumpus (*isWumpus(no,L)*) or a pit (*isPit(no, L)*) must be successful.
-* Checking for validity: The action must ensure the agent remains on the playing grid (*permitted(L)*).
-* Checking for unique visits: The action avoids revisiting a location (*not_member(L, VisitedList)*).
+1. **Checking for danger:** The clauses for ensuring that, as a result of this action, there is no Wumpus (*isWumpus(no,L)*) or a pit (*isPit(no, L)*) must be successful.
+* **Checking for validity:** The action must ensure the agent remains on the playing grid (*permitted(L)*).
+* **Checking for unique visits:** The action avoids revisiting a location (*not_member(L, VisitedList)*).
 
 After the above checks, the agent location is updated (by unifying L using *update_agent_location(L)*), and the Action variable is unified with the location that passed all the above clauses.
 
@@ -831,7 +920,7 @@ These are high level list operations that detect whether a set of x,y co-ordinat
 not_member(_, []).
 ```
 
-**Rule:** We can show a co-ordinate pair ([X,Y]) is not a member of a list of co-ordinates (the second argument), if we show that both the head of list ([U,V]) comparison (unification) fails *and* the pair is also not a member of the rest of the list (Ys) by recursively checking the head of the list of the remaining list (Ys).
+**Rule:** We can show a co-ordinate pair ([X,Y]) is not a member of a list of co-ordinates (the second argument), if we show that both the head of list ([U,V]) comparison to it (as a result of the unification processing) fails *and* it is also not a member of the rest of the list (Ys) which is performed by recursively checking the head of the list of the remaining list (Ys).
 
 ```
 not_member([X,Y], [[U,V]|Ys]) :-
@@ -840,3 +929,88 @@ not_member([X,Y], [[U,V]|Ys]) :-
     ).
 ```
 
+# Appendix
+
+## Sample Run
+```
+?-start
+Initializing started...
+Let the game begin!
+I'm in [1,1], seeing: [no,no,no]
+KB learn [1,2] - no Wumpus there!
+KB learn [1,0] - no Wumpus there!
+KB learn [2,1] - no Wumpus there!
+KB learn [0,1] - no Wumpus there!
+KB learn [1,2] - there's no Pit there!
+KB learn [1,0] - there's no Pit there!
+KB learn [2,1] - there's no Pit there!
+KB learn [0,1] - there's no Pit there!
+KB learn [3,2] - there's no gold here!
+I'm going to: [1,2]
+There's still something to do...
+I'm in [1,2], seeing: [no,yes,no]
+KB learn [1,3] - no Wumpus there!
+KB learn [1,1] - no Wumpus there!
+KB learn [2,2] - no Wumpus there!
+KB learn [0,2] - no Wumpus there!
+KB learn [1,3] - its a Pit!
+KB learn [1,1] - its a Pit!
+KB learn [2,2] - its a Pit!
+KB learn [0,2] - its a Pit!
+KB learn [3,2] - there's no gold here!
+I'm going to: [2,1]
+There's still something to do...
+I'm in [2,1], seeing: [no,no,no]
+KB learn [2,2] - no Wumpus there!
+KB learn [2,0] - no Wumpus there!
+KB learn [3,1] - no Wumpus there!
+KB learn [1,1] - no Wumpus there!
+KB learn [2,2] - there's no Pit there!
+KB learn [2,0] - there's no Pit there!
+KB learn [3,1] - there's no Pit there!
+KB learn [1,1] - there's no Pit there!
+KB learn [3,2] - there's no gold here!
+I'm going to: [2,2]
+There's still something to do...
+I'm in [2,2], seeing: [no,no,no]
+KB learn [2,3] - no Wumpus there!
+KB learn [2,1] - no Wumpus there!
+KB learn [3,2] - no Wumpus there!
+KB learn [1,2] - no Wumpus there!
+KB learn [2,3] - there's no Pit there!
+KB learn [2,1] - there's no Pit there!
+KB learn [3,2] - there's no Pit there!
+KB learn [1,2] - there's no Pit there!
+KB learn [3,2] - there's no gold here!
+I'm going to: [3,1]
+There's still something to do...
+I'm in [3,1], seeing: [yes,no,no]
+I'm in [3,1], seeing: [no,no,no]
+KB learn [3,2] - no Wumpus there!
+KB learn [3,0] - no Wumpus there!
+KB learn [4,1] - no Wumpus there!
+KB learn [2,1] - no Wumpus there!
+KB learn [3,2] - there's no Pit there!
+KB learn [3,0] - there's no Pit there!
+KB learn [4,1] - there's no Pit there!
+KB learn [2,1] - there's no Pit there!
+KB learn [3,2] - there's no gold here!
+I'm going to: [2,3]
+There's still something to do...
+I'm in [2,3], seeing: [no,yes,no]
+KB learn [2,4] - no Wumpus there!
+KB learn [2,2] - no Wumpus there!
+KB learn [3,3] - no Wumpus there!
+KB learn [1,3] - no Wumpus there!
+KB learn [2,4] - its a Pit!
+KB learn [2,2] - its a Pit!
+KB learn [3,3] - its a Pit!
+KB learn [1,3] - its a Pit!
+KB learn [3,2] - there's no gold here!
+I'm going to: [3,2]
+There's still something to do...
+WON!
+Score: 995,
+ Time: 6
+true
+```
